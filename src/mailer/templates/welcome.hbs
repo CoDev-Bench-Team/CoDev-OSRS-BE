@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Your portal is ready</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #eef1f6;
+                color: #2d3035;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+            a {
+                color: #cc2f4a;
+            }
+            @media only screen and (max-width: 640px) {
+                .page-padding {
+                    padding: 24px 12px !important;
+                }
+                .content-padding {
+                    padding: 28px 24px 32px !important;
+                }
+                .title {
+                    font-size: 28px !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+                <td class="page-padding" align="center" style="padding: 34px 20px 30px;">
+                    <table role="presentation" width="100%" style="max-width: 600px;" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                            <td style="overflow: hidden; border-radius: 12px; background-color: #ffffff; box-shadow: 0 3px 12px rgba(45, 48, 53, 0.09);">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+
+                                    <tr>
+                                        <td style="padding: 26px 40px 22px; border-bottom: 1px solid #e8eaee;">
+                                            <img src="cid:codev-supply-requests-logo" width="93" height="43" alt="CoDev Supply Requests" style="display: block; width: 93px; height: 43px; border: 0;" />
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="content-padding" style="padding: 40px 40px 40px;">
+
+                                            <div style="color: #cc2f4a; font-size: 12px; font-weight: bold;">Welcome to CoDev supply requests</div>
+
+                                            <h1 class="title" style="margin: 18px 0 14px; color: #1a1d21; font-size: 34px; line-height: 1.15;">Your portal is ready</h1>
+
+                                            <p style="margin: 0; color: #6d727b; font-size: 15px; line-height: 1.6;">
+                                                Hi {{name}} &mdash; thanks for signing up. CoDev supply requests gives your team one clear place to submit, review, and track every operational request.
+                                            </p>
+
+                                            <a href="{{portalUrl}}" style="display: inline-block; margin-top: 26px; padding: 14px 28px; border-radius: 6px; background-color: #cc2f4a; color: #ffffff; font-size: 15px; font-weight: bold; text-decoration: none;">Get Started</a>
+
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td style="padding: 22px 40px 26px; border-top: 1px solid #e8eaee; background-color: #fbfcfd;">
+                                            <p style="margin: 0 0 8px; color: #8b9098; font-size: 12px; line-height: 1.5;">
+                                                You&rsquo;re receiving this transactional email because you have an account or request with CoDev supply requests.
+                                            </p>
+                                            <p style="margin: 0; color: #a2a7ae; font-size: 12px;">&copy; {{year}} CoDev</p>
+                                        </td>
+                                    </tr>
+
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{title}}</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #eef1f6;
+                color: #2d3035;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+            a {
+                color: #cc2f4a;
+            }
+            @media only screen and (max-width: 640px) {
+                .page-padding {
+                    padding: 24px 12px !important;
+                }
+                .content-padding {
+                    padding: 28px 24px 32px !important;
+                }
+                .title {
+                    font-size: 28px !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+                <td class="page-padding" align="center" style="padding: 34px 20px 30px;">
+                    <table role="presentation" width="100%" style="max-width: 600px;" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                            <td style="overflow: hidden; border-radius: 12px; background-color: #ffffff; box-shadow: 0 3px 12px rgba(45, 48, 53, 0.09);">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+
+                                    <tr>
+                                        <td style="padding: 26px 40px 22px; border-bottom: 1px solid #e8eaee;">
+                                            <img src="cid:codev-supply-requests-logo" width="93" height="43" alt="CoDev Supply Requests" style="display: block; width: 93px; height: 43px; border: 0;" />
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="content-padding" style="padding: 34px 40px 40px;">
+
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                                <tr>
+                                                    <td style="color: #2d3035; font-size: 17px; font-weight: bold;">{{displayId}}</td>
+                                                    <td align="right">
+                                                        <span style="display: inline-block; padding: 6px 14px; border-radius: 999px; background-color: {{pillBackground}}; color: {{pillColor}}; font-size: 12px; font-weight: bold;">{{pillLabel}}</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <h1 class="title" style="margin: 22px 0 14px; color: #1a1d21; font-size: 34px; line-height: 1.15;">{{title}}</h1>
+
+                                            <p style="margin: 0 0 22px; color: #6d727b; font-size: 15px; line-height: 1.6;">
+                                                {{body}}{{#if pickup}} Pickup is at <strong style="color: #2d3035;">{{pickup}}</strong>.{{/if}}
+                                            </p>
+
+                                            {{#if reason}}
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 4px;">
+                                                <tr>
+                                                    <td style="padding: 20px 22px; border: 1px solid #f0b6c0; border-radius: 8px; background-color: #fdf2f4;">
+                                                        <div style="margin-bottom: 8px; color: #cc2f4a; font-size: 14px; font-weight: bold;">{{reasonLabel}}</div>
+                                                        <div style="color: #cc2f4a; font-size: 14px; line-height: 1.5;">{{reason}}</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            {{/if}}
+
+                                            {{#if dateLine}}
+                                            <p style="margin: 0 0 24px; color: #8b9098; font-size: 13px;">{{dateLine}}</p>
+                                            {{/if}}
+
+                                            {{#if items}}
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; border-radius: 8px; overflow: hidden;">
+                                                <tr>
+                                                    <td style="padding: 12px 18px; background-color: #f3f5f8; color: #8b9098; font-size: 11px; font-weight: bold; letter-spacing: 0.8px;">ITEM</td>
+                                                    <td align="right" style="padding: 12px 18px; background-color: #f3f5f8; color: #8b9098; font-size: 11px; font-weight: bold; letter-spacing: 0.8px;">QTY</td>
+                                                </tr>
+                                                {{#each items}}
+                                                <tr>
+                                                    <td style="padding: 16px 18px; border-bottom: 1px solid #eef0f3; color: #2d3035; font-size: 14px; font-weight: bold;">{{this.itemName}}</td>
+                                                    <td align="right" style="padding: 16px 18px; border-bottom: 1px solid #eef0f3; color: #2d3035; font-size: 14px; font-weight: bold;">{{this.quantity}}</td>
+                                                </tr>
+                                                {{/each}}
+                                            </table>
+                                            {{/if}}
+
+                                            {{#if purpose}}
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 22px;">
+                                                <tr>
+                                                    <td style="padding: 20px 22px; border-radius: 8px; background-color: #f8f9fb;">
+                                                        <div style="margin-bottom: 8px; color: #2d3035; font-size: 15px; font-weight: bold;">Note to Approver</div>
+                                                        <div style="color: #6d727b; font-size: 14px; line-height: 1.5;">{{purpose}}</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            {{/if}}
+
+                                            {{#if ctaLabel}}
+                                            <a href="{{ctaUrl}}" style="display: inline-block; margin-top: 26px; padding: 14px 28px; border-radius: 6px; background-color: #cc2f4a; color: #ffffff; font-size: 15px; font-weight: bold; text-decoration: none;">{{ctaLabel}}</a>
+                                            {{/if}}
+
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td style="padding: 22px 40px 26px; border-top: 1px solid #e8eaee; background-color: #fbfcfd;">
+                                            <p style="margin: 0 0 8px; color: #8b9098; font-size: 12px; line-height: 1.5;">
+                                                You&rsquo;re receiving this transactional email because you have an account or request with CoDev supply requests.
+                                            </p>
+                                            <p style="margin: 0; color: #a2a7ae; font-size: 12px;">&copy; {{year}} CoDev</p>
+                                        </td>
+                                    </tr>
+
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

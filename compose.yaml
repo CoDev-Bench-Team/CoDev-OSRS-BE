@@ -1,0 +1,24 @@
+services:
+  postgresql:
+    container_name: postgresql
+    environment:
+      POSTGRES_USER: ${POSTGRESQL_USER}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRESQL_DATABASE}
+    image: postgres:${POSTGRESQL_VERSION}
+    networks:
+      - codev-osrs-backend-network
+    ports:
+      - "${POSTGRESQL_PORT}:5432"
+    volumes:
+      - "postgresql:/var/lib/postgresql"
+    restart: unless-stopped
+    command: postgres -c 'max_connections=1000'
+
+volumes:
+  postgresql:
+    driver: local
+networks:
+  codev-osrs-backend-network:
+    driver: bridge
+    name: codev-osrs-backend-network

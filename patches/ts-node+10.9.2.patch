@@ -1,0 +1,54 @@
+diff --git a/node_modules/ts-node/dist-raw/node-internal-modules-esm-resolve.js b/node_modules/ts-node/dist-raw/node-internal-modules-esm-resolve.js
+index 2fbd832..8bc5168 100644
+--- a/node_modules/ts-node/dist-raw/node-internal-modules-esm-resolve.js
++++ b/node_modules/ts-node/dist-raw/node-internal-modules-esm-resolve.js
+@@ -571,27 +571,41 @@ function packageExportsResolve(
+   }
+ 
+   let bestMatch = '';
++  let bestMatchSubpath = '';
+   const keys = ObjectGetOwnPropertyNames(exports);
+   for (let i = 0; i < keys.length; i++) {
+     const key = keys[i];
+-    if (key[key.length - 1] === '*' &&
++    // Patched: support "pattern keys" where '*' can appear anywhere in the
++    // key (e.g. "./*.js"), not just as a trailing wildcard. The upstream
++    // node@15.3.0 snapshot this file was copied from predates Node's pattern
++    // keys support (added in Node 16.9), causing it to fall back to a less
++    // specific "./*" mapping and mis-resolve subpaths like "constants.js" to
++    // "constants.js.js".
++    const patternIndex = StringPrototypeIndexOf(key, '*');
++    if (patternIndex !== -1 &&
+         StringPrototypeStartsWith(packageSubpath,
+-                                  StringPrototypeSlice(key, 0, -1)) &&
+-        packageSubpath.length >= key.length &&
+-        key.length > bestMatch.length) {
+-      bestMatch = key;
++                                  StringPrototypeSlice(key, 0, patternIndex))) {
++      const keySuffix = StringPrototypeSlice(key, patternIndex + 1);
++      if ((keySuffix === '' || StringPrototypeEndsWith(packageSubpath, keySuffix)) &&
++          packageSubpath.length >= key.length - 1 &&
++          key.length > bestMatch.length) {
++        bestMatch = key;
++        bestMatchSubpath = StringPrototypeSlice(
++          packageSubpath, patternIndex,
++          keySuffix === '' ? packageSubpath.length : packageSubpath.length - keySuffix.length);
++      }
+     } else if (key[key.length - 1] === '/' &&
+       StringPrototypeStartsWith(packageSubpath, key) &&
+       key.length > bestMatch.length) {
+       bestMatch = key;
++      bestMatchSubpath = StringPrototypeSlice(packageSubpath, key.length);
+     }
+   }
+ 
+   if (bestMatch) {
+     const target = exports[bestMatch];
+-    const pattern = bestMatch[bestMatch.length - 1] === '*';
+-    const subpath = StringPrototypeSubstr(packageSubpath, bestMatch.length -
+-      (pattern ? 1 : 0));
++    const pattern = StringPrototypeIndexOf(bestMatch, '*') !== -1;
++    const subpath = bestMatchSubpath;
+     const resolved = resolvePackageTarget(packageJSONUrl, target, subpath,
+                                           bestMatch, base, pattern, false,
+                                           conditions);
