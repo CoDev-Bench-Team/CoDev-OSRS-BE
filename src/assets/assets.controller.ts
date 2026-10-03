@@ -34,9 +34,9 @@ export class AssetsController {
   @ApiOperation({
     summary: 'List catalog assets with live available-stock counts.',
     description:
-      'Returns assets in ascending ID order with pagination metadata. Optional filters support partial matches on name, model, or category; exact category and office filters; and stock-level filtering. Each asset carries stock counts from its inventory units, scoped to the requested office when provided: quantity (Available), reservedQuantity, assignedQuantity, and totalQuantity (Available + Reserved). Removed units are not counted. Requires an authenticated admin or employee session.',
+      'Returns assets in ascending ID order with pagination metadata. Optional filters support partial matches on name, model, or category; exact category and office filters; and stock-level filtering. Each asset carries stock counts from its inventory units, scoped to the requested office when provided: quantity (Available), reservedQuantity, assignedQuantity, and totalQuantity (Available + Reserved). Removed units are not counted. The response also carries counts: how many assets match the search, category and office filters in total and at each stock level (in_stock, low_stock, out_of_stock), ignoring stockLevel so every filter chip keeps its number. Requires an authenticated admin or employee session.',
   })
-  @ApiExampleResponse(200, 'Page of catalog assets and pagination metadata.', {
+  @ApiExampleResponse(200, 'Page of catalog assets, pagination metadata, and stock-level counts.', {
     data: [
       {
         id: 1,
@@ -63,6 +63,10 @@ export class AssetsController {
     page: 1,
     limit: 10,
     totalPages: 1,
+    counts: {
+      total: 12,
+      byStockLevel: { in_stock: 7, low_stock: 3, out_of_stock: 2 },
+    },
   })
   @ApiValidationProblemResponse(PaginatedAssetsQueryDto)
   @ApiUnauthorizedProblemResponse()
