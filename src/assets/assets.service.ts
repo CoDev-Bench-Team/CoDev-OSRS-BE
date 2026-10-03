@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Asset, AssetLocation } from './entities/asset.entity.js';
+import { Asset, AssetCategory, AssetLocation } from './entities/asset.entity.js';
 import { InventoryItem, InventoryItemStatus } from '../inventory-items/entities/inventory-item.entity.js';
 import { CreateAssetDto } from './dto/create-asset.dto.js';
 import { UpdateAssetDto } from './dto/update-asset.dto.js';
@@ -18,6 +18,11 @@ type AssetWithQuantity = Asset & {
 
 const EMPTY_STOCK = { quantity: 0, reservedQuantity: 0, assignedQuantity: 0, totalQuantity: 0 };
 
+// Assets matching the list's filters except stockLevel, per stock level
+type AssetStockLevelCounts = { total: number; byStockLevel: Record<AssetStockLevel, number> };
+
+type AssetsPage = PaginatedResult<AssetWithQuantity> & { counts: AssetStockLevelCounts };
+
 @Injectable()
 export class AssetsService {
     constructor(
@@ -32,7 +37,35 @@ export class AssetsService {
     // Returns paginated results given the current page and how many items per page,
     // optionally filtered by search text, category, office location, and stock level
     //
-    async list({ page = 1, limit = 10, search, category, location, stockLevel }: PaginatedAssetsQueryDto): Promise<PaginatedResult<AssetWithQuantity>> {
+    async list({ page = 1, limit = 10, search, category, location, stockLevel }: PaginatedAssetsQueryDto): Promise<AssetsPage> {
+        const query = this.filteredAssets(search, category);
+        if (stockLevel) {
+            query.andWhere(this.stockLevelConditions(location)[stockLevel], this.stockParameters(location));
+        }
+
+        const [[data, total], counts] = await Promise.all([
+            query
+                .orderBy('asset.id', 'ASC')
+                .skip((page - 1) * limit)
+                .take(limit)
+                .getManyAndCount(),
+            this.stockLevelCounts(search, category, location),
+        ]);
+
+        return {
+            data: await this.attachQuantities(data, location),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            counts,
+        };
+    }
+
+    //
+    // Assets matching the search text and category, before stock-level filtering
+    //
+    private filteredAssets(search?: string, category?: AssetCategory) {
         const query = this.assetRepository.createQueryBuilder('asset');
 
         if (search) {
@@ -44,35 +77,53 @@ export class AssetsService {
         if (category) {
             query.andWhere('asset.category = :category', { category });
         }
-        if (stockLevel) {
-            // Same count attachQuantities reports: Available units, scoped to the location if given
-            const availableCount = `(
-                                SELECT COUNT(*) FROM inventory_items inventory
-                                WHERE inventory."asset_id" = asset.id
-                  AND inventory.status = :availableStatus
-                                    AND inventory."deleted_at" IS NULL
-                  ${location ? 'AND inventory.location = :location' : ''}
-            )`;
-            const stockLevelConditions: Record<AssetStockLevel, string> = {
-                [AssetStockLevel.OUT_OF_STOCK]: `${availableCount} = 0`,
-                [AssetStockLevel.LOW_STOCK]: `${availableCount} BETWEEN 1 AND asset.lowQtyAlert`,
-                [AssetStockLevel.IN_STOCK]: `${availableCount} > asset.lowQtyAlert`,
-            };
-            query.andWhere(stockLevelConditions[stockLevel], { availableStatus: InventoryItemStatus.AVAILABLE, location });
-        }
+        return query;
+    }
 
-        const [data, total] = await query
-            .orderBy('asset.id', 'ASC')
-            .skip((page - 1) * limit)
-            .take(limit)
-            .getManyAndCount();
+    //
+    // SQL conditions for each stock level, using the same count attachQuantities
+    // reports as quantity: Available units, scoped to the location if given
+    //
+    private stockLevelConditions(location?: AssetLocation): Record<AssetStockLevel, string> {
+        const availableCount = `(
+            SELECT COUNT(*) FROM inventory_items inventory
+            WHERE inventory."asset_id" = asset.id
+              AND inventory.status = :availableStatus
+              AND inventory."deleted_at" IS NULL
+              ${location ? 'AND inventory.location = :location' : ''}
+        )`;
+        return {
+            [AssetStockLevel.OUT_OF_STOCK]: `${availableCount} = 0`,
+            [AssetStockLevel.LOW_STOCK]: `${availableCount} BETWEEN 1 AND asset."low_qty_alert"`,
+            [AssetStockLevel.IN_STOCK]: `${availableCount} > asset."low_qty_alert"`,
+        };
+    }
+
+    private stockParameters(location?: AssetLocation) {
+        return { availableStatus: InventoryItemStatus.AVAILABLE, location };
+    }
+
+    //
+    // How many assets match the search, category and location at each stock
+    // level, ignoring the stock-level filter so every filter chip keeps its count
+    //
+    private async stockLevelCounts(search?: string, category?: AssetCategory, location?: AssetLocation): Promise<AssetStockLevelCounts> {
+        const conditions = this.stockLevelConditions(location);
+        const raw = await this.filteredAssets(search, category)
+            .select('COUNT(*)', 'total')
+            .addSelect(`COUNT(*) FILTER (WHERE ${conditions[AssetStockLevel.IN_STOCK]})`, AssetStockLevel.IN_STOCK)
+            .addSelect(`COUNT(*) FILTER (WHERE ${conditions[AssetStockLevel.LOW_STOCK]})`, AssetStockLevel.LOW_STOCK)
+            .addSelect(`COUNT(*) FILTER (WHERE ${conditions[AssetStockLevel.OUT_OF_STOCK]})`, AssetStockLevel.OUT_OF_STOCK)
+            .setParameters(this.stockParameters(location))
+            .getRawOne<Record<'total' | AssetStockLevel, string>>();
 
         return {
-            data: await this.attachQuantities(data, location),
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            total: Number(raw?.total ?? 0),
+            byStockLevel: {
+                [AssetStockLevel.IN_STOCK]: Number(raw?.[AssetStockLevel.IN_STOCK] ?? 0),
+                [AssetStockLevel.LOW_STOCK]: Number(raw?.[AssetStockLevel.LOW_STOCK] ?? 0),
+                [AssetStockLevel.OUT_OF_STOCK]: Number(raw?.[AssetStockLevel.OUT_OF_STOCK] ?? 0),
+            },
         };
     }
 
