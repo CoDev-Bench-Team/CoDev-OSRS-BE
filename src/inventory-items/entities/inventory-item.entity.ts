@@ -108,4 +108,8 @@ export class InventoryItem {
 
 	@ManyToOne(() => User, { nullable: true })
 	deletedBy: Relation<User | null>;
+
+	/** Required when an admin removes the unit; kept with the soft-deleted row. */
+	@Column({ type: 'varchar', length: 500, nullable: true })
+	removalReason: string | null;
 }

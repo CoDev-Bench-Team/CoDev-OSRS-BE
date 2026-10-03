@@ -6,6 +6,7 @@ import { User } from '../users/entities/user.entity.js';
 import { CreateInventoryItemDto } from './dto/create-inventory-item.dto.js';
 import { CreateInventoryItemBatchDto } from './dto/create-inventory-item-batch.dto.js';
 import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto.js';
+import { RemoveInventoryItemDto } from './dto/remove-inventory-item.dto.js';
 import { PaginatedInventoryItemsQueryDto } from './dto/paginated-inventory-items-query.dto.js';
 import { InventoryItem, InventoryItemStatus } from './entities/inventory-item.entity.js';
 import { PaginatedResult } from '../common/paginated-result.js';
@@ -121,12 +122,26 @@ export class InventoryItemsService {
     return this.findOne(id);
   }
 
-  async remove(id: number): Promise<InventoryItem> {
+  //
+  // Soft-deletes the unit: it drops out of every list and stock count but stays
+  // in the database with deletedAt, deletedBy and the admin's removal reason
+  //
+  async remove(id: number, { reason }: RemoveInventoryItemDto, actor: User): Promise<InventoryItem> {
     const item = await this.inventoryItemRepository.findOneBy({ id });
     if (!item) {
       throw new NotFoundException(`Inventory item with ID '${id}' could not be found.`);
     }
-    return this.inventoryItemRepository.remove(item);
+
+    await this.inventoryItemRepository.manager.transaction(async (manager) => {
+      await manager.update(InventoryItem, id, { removalReason: reason.trim(), deletedBy: actor });
+      await manager.softDelete(InventoryItem, id);
+    });
+
+    return this.inventoryItemRepository.findOneOrFail({
+      where: { id },
+      relations: { asset: true },
+      withDeleted: true,
+    });
   }
 
   async countAvailableForAssets(assetIds: number[], location?: string): Promise<Map<number, number>> {

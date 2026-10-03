@@ -8,12 +8,15 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InventoryItemsService } from './inventory-items.service.js';
 import { CreateInventoryItemDto } from './dto/create-inventory-item.dto.js';
 import { CreateInventoryItemBatchDto } from './dto/create-inventory-item-batch.dto.js';
 import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto.js';
+import { RemoveInventoryItemDto } from './dto/remove-inventory-item.dto.js';
 import { PaginatedInventoryItemsQueryDto } from './dto/paginated-inventory-items-query.dto.js';
 import {
   ApiBadRequestProblemResponse,
@@ -278,7 +281,7 @@ export class InventoryItemsController {
   @ApiOperation({
     summary: 'Remove an inventory unit.',
     description:
-      'Deletes one physical-unit record and returns the removed unit. Admin session required.',
+      'Admin only. A soft delete: the unit disappears from every list and stock count but stays in the database with deletedAt, deletedBy and the required removal reason. Returns the removed unit.',
   })
   @ApiExampleResponse(200, 'The removed inventory unit.', {
     id: 12,
@@ -294,16 +297,27 @@ export class InventoryItemsController {
     price: 1299.99,
     supplier: 'Amazon',
     createdAt: '2026-01-16T09:30:00.000Z',
+    deletedAt: '2026-10-03T02:00:00.000Z',
+    removalReason: 'Screen damaged beyond repair.',
   })
-  @ApiBadRequestProblemResponse(
-    'Validation failed (numeric string is expected)',
-  )
+  @ApiValidationProblemResponse(RemoveInventoryItemDto, {
+    invalidId: {
+      summary: 'The route ID is not an integer.',
+      detail: 'Validation failed (numeric string is expected)',
+    },
+  })
   @ApiUnauthorizedProblemResponse()
   @ApiForbiddenProblemResponse()
   @ApiNotFoundProblemResponse('Inventory item')
   @Roles('admin')
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.inventoryItemsService.remove(id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() removeInventoryItemDto: RemoveInventoryItemDto,
+    @Req() request: ExpressRequest,
+  ) {
+    // The global AuthGuard rejects unauthenticated requests before this
+    // handler runs, so `request.user` is always populated here.
+    return this.inventoryItemsService.remove(id, removeInventoryItemDto, request.user!);
   }
 }
