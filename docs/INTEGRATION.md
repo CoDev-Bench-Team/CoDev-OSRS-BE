@@ -102,7 +102,7 @@ Errors use `Content-Type: application/problem+json` and include `title`, `status
 
 `GET /assets` supports `page`, `limit`, `search` (partial name/model/category), `category`, `location`, and `stockLevel` (`in_stock`, `low_stock`, `out_of_stock`). Categories are exactly `Laptop`, `Headset`, `Monitor`, `Phone`, `UPS`, `Mice`, `Wifi`, `Type C Hub`, and `Other Devices`; the API spelling is `Wifi` even if the UI says WiFi. Locations are `Cebu`, `Bacolod`, `Makati`, `Ortigas`, and `Davao`.
 
-Asset results include `id`, `category`, `name`, `model`, `description`, category-specific specs (`ram`, `processor`, `graphics`, `operatingSystem`, `storage`), `imageBase64`, `lowQtyAlert`, and `quantity`. `quantity` counts inventory units with status `Available`; optional `location` scopes list counts. `GET /assets/:id` always reports quantity across all offices. Derive stock labels as out when quantity is `0`, low when it is from `1` through `lowQtyAlert`, and available when it is greater than the threshold.
+Asset results include `id`, `category`, `name`, `model`, `description`, category-specific specs (`ram`, `processor`, `graphics`, `operatingSystem`, `storage`), `imageBase64`, `lowQtyAlert`, and stock counts: `quantity` (units with status `Available`), `reservedQuantity`, `assignedQuantity`, and `totalQuantity` (`Available` + `Reserved`). Removed units are not counted. Optional `location` scopes list counts. `GET /assets/:id` always reports counts across all offices. Derive stock labels as out when quantity is `0`, low when it is from `1` through `lowQtyAlert`, and available when it is greater than the threshold.
 
 The API has one string `model` per asset and no model-variant endpoint. Category-specific add forms map to the same asset DTO; send the chosen category and the applicable specification fields. Physical stock is managed separately from catalog definitions.
 
@@ -304,7 +304,7 @@ const inventoryParams = new URLSearchParams({
 const inventoryPage = await apiFetch(`/inventory-items?${inventoryParams}`);
 ```
 
-For edits, call `PATCH /inventory-items/:id`; omit unchanged fields. `assignedToId: null` unassigns and returns the unit to Available. The users directory (`GET /users`, admin-only) supplies assignable users. For removal, use `DELETE /inventory-items/:id` only after the screen's confirmation; this is a permanent unit deletion.
+For edits, call `PATCH /inventory-items/:id`; omit unchanged fields. `assignedToId: null` unassigns and returns the unit to Available. The users directory (`GET /users`, admin-only) supplies assignable users. For removal, call `DELETE /inventory-items/:id` with a required body `{ "reason": "..." }` (1–500 characters) from the screen's Reason for removal. Removal is a soft delete: the unit leaves every list and stock count, and the API keeps it with `deletedAt`, `deletedBy`, and `removalReason`.
 
 ```ts
 const unit = await apiFetch(`/inventory-items/${inventoryItemId}`);

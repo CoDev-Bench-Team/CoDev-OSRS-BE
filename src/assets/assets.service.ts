@@ -8,7 +8,15 @@ import { PaginatedResult } from '../common/paginated-result.js';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
-type AssetWithQuantity = Asset & { quantity: number };
+// quantity is the Available count; totalQuantity is Available + Reserved
+type AssetWithQuantity = Asset & {
+    quantity: number;
+    reservedQuantity: number;
+    assignedQuantity: number;
+    totalQuantity: number;
+};
+
+const EMPTY_STOCK = { quantity: 0, reservedQuantity: 0, assignedQuantity: 0, totalQuantity: 0 };
 
 @Injectable()
 export class AssetsService {
@@ -94,7 +102,7 @@ export class AssetsService {
 
         const savedAsset = await this.assetRepository.save(newAsset);
 
-        return Object.assign(savedAsset, { quantity: 0 });
+        return Object.assign(savedAsset, EMPTY_STOCK);
     }
 
     //
@@ -126,9 +134,9 @@ export class AssetsService {
     }
 
     //
-    // Computes each asset's quantity as the number of its InventoryItem
-    // records that are currently Available (at the given location, if any),
-    // and attaches it to the entity
+    // Counts each asset's InventoryItem records by status (at the given location,
+    // if any) and attaches them: quantity (Available), reservedQuantity,
+    // assignedQuantity, and totalQuantity (Available + Reserved)
     //
     private async attachQuantities(assets: Asset[], location?: AssetLocation): Promise<AssetWithQuantity[]> {
         if (!assets.length) {
@@ -139,9 +147,12 @@ export class AssetsService {
             .createQueryBuilder('inventory')
             .innerJoin('inventory.asset', 'asset')
             .select('asset.id', 'assetId')
+            .addSelect('inventory.status', 'status')
             .addSelect('COUNT(inventory.id)', 'count')
             .where('asset.id IN (:...assetIds)', { assetIds: assets.map((asset) => asset.id) })
-            .andWhere('inventory.status = :status', { status: InventoryItemStatus.AVAILABLE });
+            .andWhere('inventory.status IN (:...statuses)', {
+                statuses: [InventoryItemStatus.AVAILABLE, InventoryItemStatus.RESERVED, InventoryItemStatus.ASSIGNED],
+            });
 
         if (location) {
             countQuery.andWhere('inventory.location = :location', { location });
@@ -149,11 +160,25 @@ export class AssetsService {
 
         const counts = await countQuery
             .groupBy('asset.id')
-            .getRawMany<{ assetId: number; count: string }>();
+            .addGroupBy('inventory.status')
+            .getRawMany<{ assetId: number; status: InventoryItemStatus; count: string }>();
 
-        const quantityByAssetId = new Map(counts.map(({ assetId, count }) => [assetId, Number(count)]));
+        const countsByAssetId = new Map<number, Partial<Record<InventoryItemStatus, number>>>();
+        for (const { assetId, status, count } of counts) {
+            countsByAssetId.set(assetId, { ...countsByAssetId.get(assetId), [status]: Number(count) });
+        }
 
-        return assets.map((asset) => Object.assign(asset, { quantity: quantityByAssetId.get(asset.id) ?? 0 }));
+        return assets.map((asset) => {
+            const statusCounts = countsByAssetId.get(asset.id) ?? {};
+            const available = statusCounts[InventoryItemStatus.AVAILABLE] ?? 0;
+            const reserved = statusCounts[InventoryItemStatus.RESERVED] ?? 0;
+            return Object.assign(asset, {
+                quantity: available,
+                reservedQuantity: reserved,
+                assignedQuantity: statusCounts[InventoryItemStatus.ASSIGNED] ?? 0,
+                totalQuantity: available + reserved,
+            });
+        });
     }
 
     //
@@ -165,9 +190,10 @@ export class AssetsService {
             throw new NotFoundException(`Asset with ID '${id}' could not be found.`);
         }
 
-        const stockCount = await this.inventoryItemRepository.count({ where: { asset: { id } } });
+        // Removed units are soft-deleted but still reference the asset, so they block deletion too
+        const stockCount = await this.inventoryItemRepository.count({ where: { asset: { id } }, withDeleted: true });
         if (stockCount > 0) {
-            throw new ConflictException(`Asset with ID '${id}' still has stock units and cannot be deleted.`);
+            throw new ConflictException(`Asset with ID '${id}' has inventory units, including removed ones, and cannot be deleted.`);
         }
 
         return this.assetRepository.remove(assetToDelete);

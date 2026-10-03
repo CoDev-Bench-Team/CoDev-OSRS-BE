@@ -34,7 +34,7 @@ export class AssetsController {
   @ApiOperation({
     summary: 'List catalog assets with live available-stock counts.',
     description:
-      'Returns assets in ascending ID order with pagination metadata. Optional filters support partial matches on name, model, or category; exact category and office filters; and stock-level filtering. Quantity counts only Available inventory units, scoped to the requested office when provided. Requires an authenticated admin or employee session.',
+      'Returns assets in ascending ID order with pagination metadata. Optional filters support partial matches on name, model, or category; exact category and office filters; and stock-level filtering. Each asset carries stock counts from its inventory units, scoped to the requested office when provided: quantity (Available), reservedQuantity, assignedQuantity, and totalQuantity (Available + Reserved). Removed units are not counted. Requires an authenticated admin or employee session.',
   })
   @ApiExampleResponse(200, 'Page of catalog assets and pagination metadata.', {
     data: [
@@ -54,6 +54,9 @@ export class AssetsController {
         createdAt: '2026-01-15T09:30:00.000Z',
         updatedAt: null,
         quantity: 8,
+        reservedQuantity: 2,
+        assignedQuantity: 5,
+        totalQuantity: 10,
       },
     ],
     total: 1,
@@ -74,7 +77,7 @@ export class AssetsController {
   @ApiOperation({
     summary: 'Get one catalog asset and its available-stock count.',
     description:
-      'Looks up an asset by its numeric ID. The quantity is the number of Available inventory units across all offices. Requires an authenticated admin or employee session.',
+      'Looks up an asset by its numeric ID. Stock counts cover all offices: quantity (Available), reservedQuantity, assignedQuantity, and totalQuantity (Available + Reserved). Requires an authenticated admin or employee session.',
   })
   @ApiExampleResponse(200, 'The requested catalog asset.', {
     id: 1,
@@ -92,6 +95,9 @@ export class AssetsController {
     createdAt: '2026-01-15T09:30:00.000Z',
     updatedAt: null,
     quantity: 8,
+    reservedQuantity: 2,
+    assignedQuantity: 5,
+    totalQuantity: 10,
   })
   @ApiBadRequestProblemResponse(
     'Validation failed (numeric string is expected)',
@@ -109,11 +115,11 @@ export class AssetsController {
   @ApiOperation({
     summary: 'Create a catalog asset.',
     description:
-      'Creates a catalog definition with descriptive and technical specifications. Inventory units are added separately, so a new asset starts with quantity zero. Admin session required.',
+      'Creates a catalog definition with descriptive and technical specifications. Inventory units are added separately, so a new asset starts with every stock count at zero. Admin session required.',
   })
   @ApiExampleResponse(
     201,
-    'The created catalog asset; its initial quantity is zero.',
+    'The created catalog asset; its stock counts start at zero.',
     {
       id: 1,
       category: 'Laptop',
@@ -130,6 +136,9 @@ export class AssetsController {
       createdAt: '2026-01-15T09:30:00.000Z',
       updatedAt: null,
       quantity: 0,
+      reservedQuantity: 0,
+      assignedQuantity: 0,
+      totalQuantity: 0,
     },
   )
   @ApiValidationProblemResponse(CreateAssetDto)
@@ -145,11 +154,11 @@ export class AssetsController {
   @ApiOperation({
     summary: 'Update a catalog asset.',
     description:
-      'Partially updates catalog details. Send null for nullable specifications to clear them; quantity is derived from inventory and cannot be edited here. Admin session required.',
+      'Partially updates catalog details. Send null for nullable specifications to clear them; stock counts are derived from inventory and cannot be edited here. Admin session required.',
   })
   @ApiExampleResponse(
     200,
-    'The updated catalog asset with its current available quantity.',
+    'The updated catalog asset with its current stock counts.',
     {
       id: 1,
       category: 'Laptop',
@@ -166,6 +175,9 @@ export class AssetsController {
       createdAt: '2026-01-15T09:30:00.000Z',
       updatedAt: '2026-02-01T10:00:00.000Z',
       quantity: 8,
+      reservedQuantity: 2,
+      assignedQuantity: 5,
+      totalQuantity: 10,
     },
   )
   @ApiValidationProblemResponse(UpdateAssetDto, {
@@ -215,7 +227,7 @@ export class AssetsController {
   @ApiForbiddenProblemResponse()
   @ApiNotFoundProblemResponse('Asset')
   @ApiConflictProblemResponse(
-    "Asset with ID '42' still has stock units and cannot be deleted.",
+    "Asset with ID '42' has inventory units, including removed ones, and cannot be deleted.",
   )
   @Roles('admin')
   @Delete(':id')
