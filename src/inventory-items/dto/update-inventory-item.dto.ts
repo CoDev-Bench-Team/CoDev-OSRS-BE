@@ -55,6 +55,17 @@ export class UpdateInventoryItemDto {
   supplier?: string | null;
 
   @ApiPropertyOptional({
+    description: 'The Purchase Request (PR) number this inventory item was bought under. Pass null to clear it.',
+    example: 'PR-2026-0142',
+    nullable: true,
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  purchaseRequest?: string | null;
+
+  @ApiPropertyOptional({
     description:
       'Purchase date and time in ISO 8601 format. Pass null to clear it.',
     example: '2026-01-15T00:00:00.000Z',

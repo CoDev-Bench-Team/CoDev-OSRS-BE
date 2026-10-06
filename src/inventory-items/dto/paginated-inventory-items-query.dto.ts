@@ -19,7 +19,7 @@ import { PaginationQueryDto } from '../../assets/dto/pagination-query.dto.js';
 export class PaginatedInventoryItemsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description:
-      "Filter by the asset's item name, model, or category name (partial match).",
+      "Filter by the asset's item name, model, or category name, or the unit's serial number or Purchase Request number (partial match).",
     example: 'Latitude',
   })
   @IsOptional()

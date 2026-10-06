@@ -88,6 +88,10 @@ export class InventoryItem {
 	@Column({ type: 'varchar', length: 255, nullable: true })
 	supplier: string | null;
 
+	/** The Purchase Request (PR) number the unit was bought under. */
+	@Column({ type: 'varchar', length: 255, nullable: true })
+	purchaseRequest: string | null;
+
 	@Column({ type: 'timestamp', nullable: true })
 	purchasedAt: Date | null;
 
