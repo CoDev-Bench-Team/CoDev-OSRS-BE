@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, In, Not, Repository } from 'typeorm';
-import { Asset } from '../assets/entities/asset.entity.js';
+import { Asset, AssetCategory } from '../assets/entities/asset.entity.js';
 import { User } from '../users/entities/user.entity.js';
 import { CreateInventoryItemDto } from './dto/create-inventory-item.dto.js';
 import { CreateInventoryItemBatchDto } from './dto/create-inventory-item-batch.dto.js';
@@ -10,6 +10,11 @@ import { RemoveInventoryItemDto } from './dto/remove-inventory-item.dto.js';
 import { PaginatedInventoryItemsQueryDto } from './dto/paginated-inventory-items-query.dto.js';
 import { InventoryItem, InventoryItemStatus } from './entities/inventory-item.entity.js';
 import { PaginatedResult } from '../common/paginated-result.js';
+
+// Units matching the list's filters except status, per status (every status present)
+type InventoryItemStatusCounts = { total: number; byStatus: Record<InventoryItemStatus, number> };
+
+type InventoryItemsPage = PaginatedResult<InventoryItem> & { counts: InventoryItemStatusCounts };
 
 @Injectable()
 export class InventoryItemsService {
@@ -20,10 +25,31 @@ export class InventoryItemsService {
     private readonly inventoryItemRepository: Repository<InventoryItem>,
   ) {}
 
-  async findAll({ page = 1, limit = 10, search, category, status, assignedToId }: PaginatedInventoryItemsQueryDto): Promise<PaginatedResult<InventoryItem>> {
+  async findAll({ page = 1, limit = 10, search, category, status, assignedToId }: PaginatedInventoryItemsQueryDto): Promise<InventoryItemsPage> {
+    const query = this.filteredUnits(search, category, assignedToId).addSelect('asset');
+    if (status) {
+      query.andWhere('inventoryItem.status = :status', { status });
+    }
+
+    const [[data, total], counts] = await Promise.all([
+      query
+        .orderBy('inventoryItem.id', 'ASC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount(),
+      this.statusCounts(search, category, assignedToId),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit), counts };
+  }
+
+  //
+  // Units matching the search text, category and assignee, before status filtering
+  //
+  private filteredUnits(search?: string, category?: AssetCategory, assignedToId?: number) {
     const query = this.inventoryItemRepository
       .createQueryBuilder('inventoryItem')
-      .innerJoinAndSelect('inventoryItem.asset', 'asset');
+      .innerJoin('inventoryItem.asset', 'asset');
 
     if (search) {
       query.andWhere(
@@ -34,22 +60,33 @@ export class InventoryItemsService {
     if (category) {
       query.andWhere('asset.category = :category', { category });
     }
-    if (status) {
-      query.andWhere('inventoryItem.status = :status', { status });
-    }
     if (assignedToId !== undefined) {
       query
         .innerJoin('inventoryItem.assignedTo', 'assignedTo')
         .andWhere('assignedTo.id = :assignedToId', { assignedToId });
     }
+    return query;
+  }
 
-    const [data, total] = await query
-      .orderBy('inventoryItem.id', 'ASC')
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
+  //
+  // How many units match the search, category and assignee in each status,
+  // ignoring the status filter so every filter chip keeps its count
+  //
+  private async statusCounts(search?: string, category?: AssetCategory, assignedToId?: number): Promise<InventoryItemStatusCounts> {
+    const rows = await this.filteredUnits(search, category, assignedToId)
+      .select('inventoryItem.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('inventoryItem.status')
+      .getRawMany<{ status: InventoryItemStatus; count: string }>();
 
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const byStatus = Object.fromEntries(
+      Object.values(InventoryItemStatus).map((value) => [value, 0]),
+    ) as Record<InventoryItemStatus, number>;
+    for (const { status, count } of rows) {
+      byStatus[status] = Number(count);
+    }
+
+    return { total: Object.values(byStatus).reduce((sum, count) => sum + count, 0), byStatus };
   }
 
   async create(createInventoryItemDto: CreateInventoryItemDto): Promise<InventoryItem> {

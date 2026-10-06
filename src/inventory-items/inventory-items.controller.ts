@@ -38,9 +38,9 @@ export class InventoryItemsController {
   @ApiOperation({
     summary: 'List individually tracked inventory units.',
     description:
-      'Returns inventory units with their linked catalog asset and pagination metadata. Supports partial asset-name/model/category search and filters by category, status, or assigned user. Requires an authenticated admin or employee session.',
+      'Returns inventory units with their linked catalog asset and pagination metadata. Supports partial asset-name/model/category search and filters by category, status, or assigned user. The response also carries counts: how many units match the search, category and assignee filters in total and in each status (Available, Reserved, Assigned, Inactive), ignoring status so every filter chip keeps its number. Removed units are not counted. Requires an authenticated admin or employee session.',
   })
-  @ApiExampleResponse(200, 'Page of inventory units and pagination metadata.', {
+  @ApiExampleResponse(200, 'Page of inventory units, pagination metadata, and status counts.', {
     data: [
       {
         id: 12,
@@ -68,6 +68,10 @@ export class InventoryItemsController {
     page: 1,
     limit: 10,
     totalPages: 1,
+    counts: {
+      total: 40,
+      byStatus: { Available: 18, Reserved: 14, Assigned: 6, Inactive: 2 },
+    },
   })
   @ApiValidationProblemResponse(PaginatedInventoryItemsQueryDto)
   @ApiUnauthorizedProblemResponse()

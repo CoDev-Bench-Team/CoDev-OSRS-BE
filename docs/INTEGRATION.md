@@ -108,7 +108,7 @@ The API has one string `model` per asset and no model-variant endpoint. Category
 
 ### Inventory contract
 
-`GET /inventory-items` supports `page`, `limit`, `search`, `category`, `status`, and `assignedToId`; it returns each unit with its related asset. Status values are `Available`, `Reserved`, `Assigned`, and `Inactive`. There is no location filter on this list endpoint.
+`GET /inventory-items` supports `page`, `limit`, `search`, `category`, `status`, and `assignedToId`; it returns each unit with its related asset. Status values are `Available`, `Reserved`, `Assigned`, and `Inactive`. There is no location filter on this list endpoint. The response also returns `counts: { total, byStatus: { Available, Reserved, Assigned, Inactive } }` for the current `search`, `category`, and `assignedToId`, ignoring `status`, so the All items / Assigned / Available / Reserved chips need no extra request; the keys match the `status` filter values, and `total` includes Inactive units.
 
 Single-unit create accepts `assetId`, required `location`, and optional `price`, `supplier`, `purchasedAt`, `serialNumber`, `bitlockerIdentifier`, `recoveryPin`, `assignedToId`, `description`, and `attachmentUrl`. A unit created with an assignee starts `Assigned`; otherwise it starts `Available`.
 
