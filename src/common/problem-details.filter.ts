@@ -14,15 +14,19 @@ type ProblemResponse = {
   detail?: string;
 };
 
+// RFC 6901: each reference token escapes its own `~` and `/`; tokens join with `/`
+const toJsonPointer = (path: string[]) =>
+  `#/${path.map((token) => token.replace(/~/g, '~0').replace(/\//g, '~1')).join('/')}`;
+
 const mapValidationErrors = (
   errors: ValidationError[],
-  prefix = '',
+  parentPath: string[] = [],
 ): Array<{ detail: string; pointer: string }> =>
   errors.flatMap((error) => {
-    const path = prefix ? `${prefix}.${error.property}` : error.property;
+    const path = [...parentPath, error.property];
     const details = Object.values(error.constraints ?? {}).map((detail) => ({
       detail,
-      pointer: `#/${path.replace(/~/g, '~0').replace(/\./g, '/').replace(/\//g, '~1')}`,
+      pointer: toJsonPointer(path),
     }));
 
     return [...details, ...mapValidationErrors(error.children ?? [], path)];
