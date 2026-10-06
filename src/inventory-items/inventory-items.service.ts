@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, In, Not, Repository } from 'typeorm';
+import { DeepPartial, In, Not, Repository, SelectQueryBuilder } from 'typeorm';
 import { Asset, AssetCategory } from '../assets/entities/asset.entity.js';
 import { User } from '../users/entities/user.entity.js';
 import { CreateInventoryItemDto } from './dto/create-inventory-item.dto.js';
@@ -26,7 +26,7 @@ export class InventoryItemsService {
   ) {}
 
   async findAll({ page = 1, limit = 10, search, category, status, assignedToId }: PaginatedInventoryItemsQueryDto): Promise<InventoryItemsPage> {
-    const query = this.filteredUnits(search, category, assignedToId).addSelect('asset');
+    const query = this.withRelations(this.filteredUnits(search, category, assignedToId));
     if (status) {
       query.andWhere('inventoryItem.status = :status', { status });
     }
@@ -49,11 +49,13 @@ export class InventoryItemsService {
   private filteredUnits(search?: string, category?: AssetCategory, assignedToId?: number) {
     const query = this.inventoryItemRepository
       .createQueryBuilder('inventoryItem')
-      .innerJoin('inventoryItem.asset', 'asset');
+      .innerJoin('inventoryItem.asset', 'asset')
+      .leftJoin('inventoryItem.assignedTo', 'assignedTo');
 
     if (search) {
       query.andWhere(
-        '(asset.name ILIKE :search OR asset.model ILIKE :search OR CAST(asset.category AS text) ILIKE :search)',
+        `(asset.name ILIKE :search OR asset.model ILIKE :search OR CAST(asset.category AS text) ILIKE :search
+          OR inventoryItem.serialNumber ILIKE :search OR inventoryItem.purchaseRequest ILIKE :search)`,
         { search: `%${search}%` },
       );
     }
@@ -61,11 +63,19 @@ export class InventoryItemsService {
       query.andWhere('asset.category = :category', { category });
     }
     if (assignedToId !== undefined) {
-      query
-        .innerJoin('inventoryItem.assignedTo', 'assignedTo')
-        .andWhere('assignedTo.id = :assignedToId', { assignedToId });
+      query.andWhere('assignedTo.id = :assignedToId', { assignedToId });
     }
     return query;
+  }
+
+  //
+  // Selects the unit's asset and its assignee's public fields (no Google
+  // subject, role or audit columns)
+  //
+  private withRelations(query: SelectQueryBuilder<InventoryItem>) {
+    return query
+      .addSelect('asset')
+      .addSelect(['assignedTo.id', 'assignedTo.firstName', 'assignedTo.lastName', 'assignedTo.email']);
   }
 
   //
@@ -122,10 +132,14 @@ export class InventoryItemsService {
   }
 
   async findOne(id: number): Promise<InventoryItem> {
-    const item = await this.inventoryItemRepository.findOne({
-      where: { id },
-      relations: { asset: true },
-    });
+    const item = await this.withRelations(
+      this.inventoryItemRepository
+        .createQueryBuilder('inventoryItem')
+        .innerJoin('inventoryItem.asset', 'asset')
+        .leftJoin('inventoryItem.assignedTo', 'assignedTo'),
+    )
+      .where('inventoryItem.id = :id', { id })
+      .getOne();
     if (!item) {
       throw new NotFoundException(`Inventory item with ID '${id}' could not be found.`);
     }
@@ -133,14 +147,16 @@ export class InventoryItemsService {
   }
 
   async update(id: number, updateInventoryItemDto: UpdateInventoryItemDto): Promise<InventoryItem> {
-    const itemToUpdate = await this.inventoryItemRepository.findOneBy({ id });
+    const itemToUpdate = await this.inventoryItemRepository.findOne({ where: { id }, relations: { assignedTo: true } });
     if (!itemToUpdate) {
       throw new NotFoundException(`Inventory item with ID '${id}' could not be found.`);
     }
 
     const { assetId, assignedToId, ...itemChanges } = updateInventoryItemDto;
     const asset = assetId === undefined ? undefined : await this.findAsset(assetId);
-    const assignment = assignedToId === undefined
+    // Re-sending the current assignee (the edit form always does) keeps the original assigned-on date
+    const sameAssignee = assignedToId != null && itemToUpdate.assignedTo?.id === assignedToId;
+    const assignment = assignedToId === undefined || sameAssignee
       ? {}
       : assignedToId === null
         ? { assignedTo: null, assignedAt: null, status: InventoryItemStatus.AVAILABLE }

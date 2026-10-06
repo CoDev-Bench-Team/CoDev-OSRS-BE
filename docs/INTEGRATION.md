@@ -108,7 +108,7 @@ The API has one string `model` per asset and no model-variant endpoint. Category
 
 ### Inventory contract
 
-`GET /inventory-items` supports `page`, `limit`, `search`, `category`, `status`, and `assignedToId`; it returns each unit with its related asset. Status values are `Available`, `Reserved`, `Assigned`, and `Inactive`. There is no location filter on this list endpoint. The response also returns `counts: { total, byStatus: { Available, Reserved, Assigned, Inactive } }` for the current `search`, `category`, and `assignedToId`, ignoring `status`, so the All items / Assigned / Available / Reserved chips need no extra request; the keys match the `status` filter values, and `total` includes Inactive units.
+`GET /inventory-items` supports `page`, `limit`, `search`, `category`, `status`, and `assignedToId`; it returns each unit with its related asset, its `purchaseRequest` number, and `assignedTo` (`id`, `firstName`, `lastName`, `email`, or `null`). `search` also matches a unit's `serialNumber` and `purchaseRequest`. Status values are `Available`, `Reserved`, `Assigned`, and `Inactive`. There is no location filter on this list endpoint. The response also returns `counts: { total, byStatus: { Available, Reserved, Assigned, Inactive } }` for the current `search`, `category`, and `assignedToId`, ignoring `status`, so the All items / Assigned / Available / Reserved chips need no extra request; the keys match the `status` filter values, and `total` includes Inactive units.
 
 Single-unit create accepts `assetId`, required `location`, and optional `price`, `supplier`, `purchasedAt`, `serialNumber`, `bitlockerIdentifier`, `recoveryPin`, `assignedToId`, `description`, and `attachmentUrl`. A unit created with an assignee starts `Assigned`; otherwise it starts `Available`.
 
@@ -295,7 +295,7 @@ await apiFetch(`/assets/${assetId}`, { method: 'DELETE' });
 
 ![Admin inventory](screens/admin-view/inventory-screen.png)
 
-Load and filter with `GET /inventory-items`. Add one unit with `POST /inventory-items`; add a 1-100 unit batch with `POST /inventory-items/bulk`. Map catalog selection to `assetId`, office to `location`, and purchase/identifier/assignment fields to the create DTO. The unit endpoint returns the related asset and actual lifecycle status.
+Load and filter with `GET /inventory-items`. Add one unit with `POST /inventory-items`; add a 1-100 unit batch with `POST /inventory-items/bulk`. Map catalog selection to `assetId`, office to `location`, the PR number to `purchaseRequest` (shared by every unit in a bulk add), and purchase/identifier/assignment fields to the create DTO. The unit endpoint returns the related asset and actual lifecycle status.
 
 ```ts
 const inventoryParams = new URLSearchParams({
@@ -304,7 +304,7 @@ const inventoryParams = new URLSearchParams({
 const inventoryPage = await apiFetch(`/inventory-items?${inventoryParams}`);
 ```
 
-For edits, call `PATCH /inventory-items/:id`; omit unchanged fields. `assignedToId: null` unassigns and returns the unit to Available. The users directory (`GET /users`, admin-only) supplies assignable users. For removal, call `DELETE /inventory-items/:id` with a required body `{ "reason": "..." }` (1–500 characters) from the screen's Reason for removal. Removal is a soft delete: the unit leaves every list and stock count, and the API keeps it with `deletedAt`, `deletedBy`, and `removalReason`.
+For edits, call `PATCH /inventory-items/:id`; omit unchanged fields. `assignedToId: null` unassigns and returns the unit to Available; re-sending the unit's current `assignedTo.id` keeps its `assignedAt` date, and only a different user resets it. The users directory (`GET /users`, admin-only) supplies assignable users. For removal, call `DELETE /inventory-items/:id` with a required body `{ "reason": "..." }` (1–500 characters) from the screen's Reason for removal. Removal is a soft delete: the unit leaves every list and stock count, and the API keeps it with `deletedAt`, `deletedBy`, and `removalReason`.
 
 ```ts
 const unit = await apiFetch(`/inventory-items/${inventoryItemId}`);

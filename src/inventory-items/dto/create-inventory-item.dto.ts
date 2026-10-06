@@ -48,6 +48,16 @@ export class CreateInventoryItemDto {
   supplier?: string;
 
   @ApiPropertyOptional({
+    description: 'The Purchase Request (PR) number this inventory item was bought under.',
+    example: 'PR-2026-0142',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  purchaseRequest?: string;
+
+  @ApiPropertyOptional({
     description: 'Purchase date and time in ISO 8601 format.',
     example: '2026-01-15T00:00:00.000Z',
     format: 'date-time',
