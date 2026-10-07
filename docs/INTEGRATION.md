@@ -116,7 +116,7 @@ Bulk create uses `POST /inventory-items/bulk` with shared asset/location/purchas
 
 ### Request contract and workflow
 
-`GET /requests` supports `page`, `limit`, `status`, partial `displayId`, partial `requester` (name/email), `requesterId`, partial `itemName`, and `sort` (`newest`, `oldest`, `employee_name_asc`). Returned request lines include `asset`, `quantity`, and current `availableStock`.
+`GET /requests` supports `page`, `limit`, `status`, `search` (one box: partial request ID, requester first/last/full name or email, or any requested asset's name or model), partial `displayId`, partial `requester` (name/email), `requesterId`, partial `itemName`, and `sort` (`newest`, `oldest`, `employee_name_asc`). Returned request lines include `asset`, `quantity`, and current `availableStock`.
 
 Submit `POST /requests` with at least one unique asset line. Each `assetId` and `quantity` must be a positive integer; `purpose` is optional and limited to 500 characters.
 
@@ -134,7 +134,7 @@ The API atomically reserves units and returns a request in `pending_approval`. I
 
 `PATCH /requests/:id` is admin-only. Example bodies: `{ "status": "approved" }`, `{ "status": "rejected", "rejectionReason": "Duplicate request" }`, `{ "status": "ready_for_pickup", "pickupLocation": "6th floor IT desk" }`, and `{ "status": "for_delivery" }`. Use `POST /requests/:id/receive` for handover and `POST /requests/:id/sign` for the Accountability Form. Use `POST /requests/:id/cancel` with `{ "reason": "No longer needed" }` when cancellation is allowed. Approval keeps units reserved until handover; receiving assigns them to the requester, while rejecting or cancelling returns reserved units to available stock.
 
-Use `GET /requests/counts` for `total`, per-status `byStatus` counts, and `inProcessing`. Use `GET /requests/history` for completed, rejected, and cancelled requests sorted by `resolvedAt`.
+`GET /requests/history` and `GET /requests/counts` accept the same `search`. Use `GET /requests/counts` for `total`, per-status `byStatus` counts, and `inProcessing`. Use `GET /requests/history` for completed, rejected, and cancelled requests sorted by `resolvedAt`.
 
 ## Employee Screens
 
