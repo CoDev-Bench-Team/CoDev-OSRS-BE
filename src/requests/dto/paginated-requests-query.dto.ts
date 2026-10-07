@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 import { RequestStatus } from '../entities/request.entity.js';
@@ -46,6 +46,16 @@ export class PaginatedRequestsQueryDto {
   @IsOptional()
   @IsEnum(RequestStatus)
   status?: RequestStatus;
+
+  @ApiPropertyOptional({
+    description:
+      "Search box: a substring of the request ID, the requester's first name, last name, full name or email, or any requested asset's name or model. Combines with the other filters.",
+    example: 'Maya',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  search?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by any substring of the human-readable request ID.',

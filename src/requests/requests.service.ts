@@ -176,7 +176,8 @@ export class RequestsService {
 
   /**
    * The list's WHERE clause: viewer scoping (employees see only their own),
-   * an optional status whitelist, and the search filters.
+   * an optional status whitelist, the combined `search`, and the per-field
+   * search filters.
    *
    * Filters on a query with no to-many join, so `skip`/`take` apply
    * correctly. `itemName` needs the `items` -> `assets` join, which would
@@ -192,12 +193,12 @@ export class RequestsService {
   private filteredQuery(
     query: Pick<
       PaginatedRequestsQueryDto,
-      'status' | 'displayId' | 'requester' | 'requesterId' | 'itemName'
+      'status' | 'search' | 'displayId' | 'requester' | 'requesterId' | 'itemName'
     >,
     viewer: User,
     statuses?: RequestStatus[],
   ): SelectQueryBuilder<Request> {
-    const { status, displayId, requester, requesterId, itemName } = query;
+    const { status, search, displayId, requester, requesterId, itemName } = query;
     const filtered = this.requestsRepository
       .createQueryBuilder('request')
       .leftJoinAndSelect('request.requestor', 'requestor');
@@ -212,6 +213,17 @@ export class RequestsService {
     }
     if (status) {
       filtered.andWhere('request.status = :status', { status });
+    }
+    if (search) {
+      // The design's single search box: request ID, requester, or any line's asset
+      filtered.andWhere(
+        `(request.displayId ILIKE :search
+          OR requestor.firstName ILIKE :search OR requestor.lastName ILIKE :search OR requestor.email ILIKE :search
+          OR CONCAT(requestor.firstName, ' ', requestor.lastName) ILIKE :search
+          OR request.id IN (SELECT ra."request_id" FROM request_assets ra INNER JOIN assets a ON a.id = ra."asset_id"
+                            WHERE a.name ILIKE :search OR a.model ILIKE :search))`,
+        { search: `%${search}%` },
+      );
     }
     if (displayId) {
       filtered.andWhere('request.displayId ILIKE :displayId', {
