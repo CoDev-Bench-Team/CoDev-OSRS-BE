@@ -26,7 +26,7 @@ export class InventoryItemsService {
   ) {}
 
   async findAll({ page = 1, limit = 10, search, category, status, assignedToId }: PaginatedInventoryItemsQueryDto): Promise<InventoryItemsPage> {
-    const query = this.withRelations(this.filteredUnits(search, category, assignedToId));
+    const query = this.withRelations(this.filteredUnits(search, category, assignedToId), 'summary');
     if (status) {
       query.andWhere('inventoryItem.status = :status', { status });
     }
@@ -70,11 +70,12 @@ export class InventoryItemsService {
 
   //
   // Selects the unit's asset and its assignee's public fields (no Google
-  // subject, role or audit columns)
+  // subject, role or audit columns). Lists take an asset summary: the full
+  // asset carries its image and specs, repeated on every unit of that asset
   //
-  private withRelations(query: SelectQueryBuilder<InventoryItem>) {
+  private withRelations(query: SelectQueryBuilder<InventoryItem>, asset: 'summary' | 'full') {
     return query
-      .addSelect('asset')
+      .addSelect(asset === 'summary' ? ['asset.id', 'asset.name', 'asset.model', 'asset.category'] : ['asset'])
       .addSelect(['assignedTo.id', 'assignedTo.firstName', 'assignedTo.lastName', 'assignedTo.email']);
   }
 
@@ -137,6 +138,7 @@ export class InventoryItemsService {
         .createQueryBuilder('inventoryItem')
         .innerJoin('inventoryItem.asset', 'asset')
         .leftJoin('inventoryItem.assignedTo', 'assignedTo'),
+      'full',
     )
       .where('inventoryItem.id = :id', { id })
       .getOne();

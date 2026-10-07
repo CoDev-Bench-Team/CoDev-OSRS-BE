@@ -38,7 +38,7 @@ export class InventoryItemsController {
   @ApiOperation({
     summary: 'List individually tracked inventory units.',
     description:
-      'Returns inventory units with their linked catalog asset, their assignee (id, name and email) when assigned, and pagination metadata. Supports partial search on asset name, model or category, serial number, or Purchase Request number, and filters by category, status, or assigned user. The response also carries counts: how many units match the search, category and assignee filters in total and in each status (Available, Reserved, Assigned, Inactive), ignoring status so every filter chip keeps its number. Removed units are not counted. Requires an authenticated admin or employee session.',
+      'Returns inventory units with an asset summary (id, name, model, category; no image or specifications), their assignee (id, name and email) when assigned, and pagination metadata. Supports partial search on asset name, model or category, serial number, or Purchase Request number, and filters by category, status, or assigned user. The response also carries counts: how many units match the search, category and assignee filters in total and in each status (Available, Reserved, Assigned, Inactive), ignoring status so every filter chip keeps its number. Removed units are not counted. Requires an authenticated admin or employee session.',
   })
   @ApiExampleResponse(200, 'Page of inventory units, pagination metadata, and status counts.', {
     data: [
