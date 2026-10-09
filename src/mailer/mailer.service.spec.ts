@@ -151,7 +151,7 @@ describe('MailerService', () => {
       expect(text).toContain('Submitted Sep 18, 2026, 9:42AM');
       expect(text).toContain('Business Laptop - Dell Latitude');
       expect(text).toContain('Note to Approver temporary project setup');
-      expect(ctaOf(mail.html)).toBe('View request');
+      expect(ctaOf(mail.html)).toBe('View Request');
       expect(ctaHrefOf(mail.html)).toBe('https://portal.test/requests/42');
     });
 
@@ -181,6 +181,7 @@ describe('MailerService', () => {
       );
       expect(text).toContain('Requester’s Office: Cebu');
       expect(ctaOf(mail.html)).toBe('Review Request');
+      expect(ctaHrefOf(mail.html)).toBe('https://portal.test/queue/42');
     });
 
     it('says "1 item" for a single line', async () => {
@@ -211,7 +212,8 @@ describe('MailerService', () => {
       expect(text).toContain('Good news, Maya — your request is approved.');
       expect(text).toContain('Approved Sep 18, 2026, 9:42AM');
       expect(text).toContain('Note to Approver');
-      expect(ctaOf(mail.html)).toBe('View approval');
+      expect(ctaOf(mail.html)).toBe('View Request');
+      expect(ctaHrefOf(mail.html)).toBe('https://portal.test/requests/42');
     });
   });
 
@@ -231,8 +233,8 @@ describe('MailerService', () => {
         'Reason for rejection Duplicate of request SR-1042',
       );
       expect(text).not.toContain('ITEM');
-      expect(ctaOf(mail.html)).toBe('Submit a new request');
-      expect(ctaHrefOf(mail.html)).toBe('https://portal.test/requests');
+      expect(ctaOf(mail.html)).toBe('View Request');
+      expect(ctaHrefOf(mail.html)).toBe('https://portal.test/requests/42');
     });
   });
 
@@ -251,7 +253,8 @@ describe('MailerService', () => {
         'Admin changed the status of your request from Approved to Ready for pickup. Pickup is at Front desk, Cebu office.',
       );
       expect(text).toContain('Ready for Pickup Sep 18, 2026, 9:42AM');
-      expect(ctaOf(mail.html)).toBe('View request');
+      expect(ctaOf(mail.html)).toBe('View Request');
+      expect(ctaHrefOf(mail.html)).toBe('https://portal.test/requests/42');
     });
 
     it('says the location changed when it was already ready', async () => {
@@ -279,7 +282,8 @@ describe('MailerService', () => {
       expect(text).toContain(
         'Admin changed the status of your request from Approved to For Delivery.',
       );
-      expect(ctaOf(mail.html)).toBe('View request');
+      expect(ctaOf(mail.html)).toBe('View Request');
+      expect(ctaHrefOf(mail.html)).toBe('https://portal.test/requests/42');
     });
   });
 
@@ -341,7 +345,8 @@ describe('MailerService', () => {
       expect(text).toContain('Reason for cancellation Out of stock');
       expect(text).not.toContain('Reason for rejection');
       expect(text).toContain('from Approved to Cancelled');
-      expect(ctaOf(mail.html)).toBe('Submit a new request');
+      expect(ctaOf(mail.html)).toBe('View Request');
+      expect(ctaHrefOf(mail.html)).toBe('https://portal.test/requests/42');
     });
 
     it('words it for the requester when they cancelled it themselves', async () => {

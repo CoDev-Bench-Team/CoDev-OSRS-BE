@@ -163,7 +163,7 @@ export class MailerService {
                 submittedAt: formatSubmittedAt(context.submittedAt),
                 items: context.items,
                 purpose: context.purpose,
-                reviewUrl: `${process.env.PORTAL_URL}/requests/${context.requestId}`,
+                reviewUrl: `${process.env.PORTAL_URL}/queue/${context.requestId}`,
                 year: context.submittedAt.getFullYear(),
             }),
         });
@@ -181,7 +181,7 @@ export class MailerService {
             dateLine: `Approved ${formatSubmittedAt(context.submittedAt)}`,
             showItems: true,
             showPurpose: true,
-            ctaLabel: 'View approval',
+            ctaLabel: 'View Request',
         });
     }
 
@@ -200,8 +200,7 @@ export class MailerService {
             body: `Hi ${context.requesterFirstName} — Admin reviewed your request and wasn't able to approve it. Here's why:`,
             reason,
             reasonLabel: 'Reason for rejection',
-            ctaLabel: 'Submit a new request',
-            ctaUrl: `${process.env.PORTAL_URL}/requests`,
+            ctaLabel: 'View Request',
         });
     }
 
@@ -224,7 +223,7 @@ export class MailerService {
                 : `${context.requesterOffice} office`,
             dateLine: `Ready for Pickup ${formatSubmittedAt(context.submittedAt)}`,
             showItems: true,
-            ctaLabel: 'View request',
+            ctaLabel: 'View Request',
         });
     }
 
@@ -241,7 +240,7 @@ export class MailerService {
             body: `Hi ${context.requesterFirstName} — Admin changed the status of your request from ${statusLabel(context.previousStatus, 'Approved')} to For Delivery.`,
             dateLine: `For Delivery ${formatSubmittedAt(context.submittedAt)}`,
             showItems: true,
-            ctaLabel: 'View request',
+            ctaLabel: 'View Request',
         });
     }
 
@@ -302,8 +301,7 @@ export class MailerService {
                 : `Hi ${context.requesterFirstName} — Admin changed the status of your request from ${statusLabel(context.previousStatus, 'Approved')} to Cancelled because it can't be fulfilled. Here's why:`,
             reason,
             reasonLabel: 'Reason for cancellation',
-            ctaLabel: 'Submit a new request',
-            ctaUrl: `${process.env.PORTAL_URL}/requests`,
+            ctaLabel: 'View Request',
         });
     }
 
@@ -322,9 +320,8 @@ export class MailerService {
             dateLine?: string;
             showItems?: boolean;
             showPurpose?: boolean;
-            /** Omit for an email with no button. */
+            /** Omit for an email with no button; it always opens the request's own page. */
             ctaLabel?: string;
-            ctaUrl?: string;
         },
     ): Promise<void> {
         const renderTemplate = await requestStatusChangeTemplate;
@@ -346,9 +343,7 @@ export class MailerService {
                 items: variant.showItems ? context.items : null,
                 purpose: variant.showPurpose ? context.purpose : null,
                 ctaLabel: variant.ctaLabel,
-                ctaUrl:
-                    variant.ctaUrl ??
-                    `${process.env.PORTAL_URL}/requests/${context.requestId}`,
+                ctaUrl: `${process.env.PORTAL_URL}/requests/${context.requestId}`,
                 year: context.submittedAt.getFullYear(),
             }),
         });

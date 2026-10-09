@@ -433,7 +433,7 @@ Email assets are references for messages the backend sends automatically; there 
 | Admin sets `for_delivery` | [For delivery](screens/employee-view/email-request-for-delivery.png) |
 | Admin sets `completed` | [Completed](screens/employee-view/email-request-completed.png) |
 
-The supplied [received email design](screens/employee-view/email-request-received.png) is sent when a request moves to `received`. Cancellation and completion also send lifecycle emails; there are no frontend email or notification endpoints.
+The supplied [received email design](screens/employee-view/email-request-received.png) is sent when a request moves to `received`. Cancellation and completion also send lifecycle emails; there are no frontend email or notification endpoints. Email buttons deep-link into the SPA with the numeric request `id`: the requester's emails open `PORTAL_URL/requests/{id}` ("View Request"; the received email keeps "Review & sign in the portal"; the completed email has no button), and the admins' approval email opens `PORTAL_URL/queue/{id}` ("Review Request").
 
 ## Missing Screen Integrations
 
